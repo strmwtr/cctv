@@ -81,13 +81,15 @@ def sql_query():
   edge_case = ['{0}-{1}'.format(x.split('-')[1], x.split('-')[0]) for x in need_update_2]
   print edge_case
   sql_comp = sql_list_1 + sql_list_2
-
+  return sql_comp
+  
+def update_gis(pipe_list):
   #Creates list of fields names in pipes
   fields = [x.name for x in arcpy.ListFields(pipes)]
   #Loops through pipes to find matches in sql_comp and PIPEID
   with arcpy.da.SearchCursor(pipes, fields) as cursor:
     for row in cursor:
-      if row[8] in sql_comp:
+      if row[8] in pipe_list:
         print row
 
-sql_query()
+update_gis(sql_query())
