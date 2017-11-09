@@ -79,7 +79,10 @@ def sql_query():
   need_update_2 = [pipe for pipe in rev_list if pipe not in pipe_list(data)]
   #Items that need special attention
   edge_case = ['{0}-{1}'.format(x.split('-')[1], x.split('-')[0]) for x in need_update_2]
-  print edge_case
+  if len(edge_case) != 0:
+    for pipe in edge_case:
+      '{0} needs to be added to the GIS'.format(pipe)
+
   sql_comp = sql_list_1 + sql_list_2
   return sql_comp
   
@@ -91,5 +94,5 @@ def update_gis(pipe_list):
     for row in cursor:
       if row[8] in pipe_list:
         print row
-
+        print '\n'
 update_gis(sql_query())
