@@ -6,7 +6,7 @@ import csv
 fldr = r'C:\Users\brownr\Desktop\Aug'
 pipes = (r'Database Connections\Connection to GISPRDDB direct connect.sde'  
   r'\cvgis.CITY.Utilities_Storm\cvgis.CITY.storm_pipe_line')
-arcpy.env.overwriteOutput = True
+#arcpy.env.overwriteOutput = True
 data = r'C:\Users\brownr\Desktop\pipes\pipes.csv'
 
 def pipe_list(csv_file):
@@ -63,41 +63,31 @@ def move_files(tv_type, yyyy_mm):
         shutil.move(content, dest)
 
 def sql_query():
+  #Name of all files that need to be processes
   all_pipes = os.listdir(fldr)
-  
-  pipe_query = str(os.listdir(fldr))
-  pipe_query = 'PIPEID in ({0})'.format(pipe_query[1:-1])
-
-  arcpy.Select_analysis(pipes, fldr + r'\pipes.shp', pipe_query)
-  
-  updated_pipes_1 = []
-  with arcpy.da.SearchCursor(fldr + r'\pipes.shp', ['PIPEID']) as cursor:
-    for row in cursor:
-      updated_pipes_1.append(str(row[0]))
-
-  need_update = [pipe for pipe in all_pipes if pipe not in updated_pipes_1]
-
-  rev_list = []
-  for pipe in need_update:
-    rev_pipe = '{0}-{1}'.format(pipe.split('-')[1], pipe.split('-')[0]) 
-    rev_list.append(rev_pipe) 
-  
-  pipe_query_2 = 'PIPEID in ({0})'.format(str(rev_list)[1:-1])
-
-  arcpy.Select_analysis(pipes, fldr + r'\pipes_2.shp', pipe_query_2)
-
-  updated_pipes_2 = []
-  with arcpy.da.SearchCursor(fldr + r'\pipes_2.shp', ['PIPEID']) as cursor:
-    for row in cursor:
-      updated_pipes_2.append(str(row[0]))
-
-  rev_list = []
-  for pipe in updated_pipes_2:
-    rev_pipe = '{0}-{1}'.format(pipe.split('-')[1], pipe.split('-')[0]) 
-    rev_list.append(rev_pipe)
-    
-  total_updates = updated_pipes_1 + rev_list
-  edge_case = [pipe for pipe in all_pipes if pipe not in total_updates]
+  #Round 1: Vanilla
+  #Items from all_pipes that match a PIPEID
+  sql_list_1 = [pipe for pipe in all_pipes if pipe in pipe_list(data)]
+  #Items from all_pipes that do not match a PIPEID
+  need_update = [pipe for pipe in all_pipes if pipe not in pipe_list(data)]
+  #Round 2: Reverse need_update order. ie: XX100-XX000 >> XX000-XX100
+  #List comp that flips structure
+  rev_list = ['{0}-{1}'.format(x.split('-')[1], x.split('-')[0]) for x in need_update]
+  #Items from rev_list that match a PIPEID
+  sql_list_2 = [pipe for pipe in rev_list if pipe in pipe_list(data)]
+  #Items that still need attention, need to be flipped back refenence fldr
+  need_update_2 = [pipe for pipe in rev_list if pipe not in pipe_list(data)]
+  #Items that need special attention
+  edge_case = ['{0}-{1}'.format(x.split('-')[1], x.split('-')[0]) for x in need_update_2]
   print edge_case
+  sql_comp = sql_list_1 + sql_list_2
 
-print pipe_list(data)
+  #Creates list of fields names in pipes
+  fields = [x.name for x in arcpy.ListFields(pipes)]
+  #Loops through pipes to find matches in sql_comp and PIPEID
+  with arcpy.da.SearchCursor(pipes, fields) as cursor:
+    for row in cursor:
+      if row[8] in sql_comp:
+        print row
+
+sql_query()
